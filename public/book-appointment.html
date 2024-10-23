@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - Diagnostic Center</title>
+    <link rel="stylesheet" href="styles1.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Book Your Diagnostic Test Appointment</h1>
+
+        <form id="appointmentForm">
+            <!-- Personal Details -->
+            <div class="form-section">
+                <h2>Personal Information</h2>
+                <label for="name">Full Name</label>
+                <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="Enter your email" required>
+
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" name="phone" placeholder="Enter your phone number" required>
+            </div>
+
+            <!-- Test Selection -->
+            <div class="form-section">
+                <h2>Select Diagnostic Test</h2>
+                <label for="test">Test</label>
+                <select id="test" name="test" required>
+                    <option value="">Select a test</option>
+                    <option value="blood-test" data-price="50">Blood Test - $50</option>
+                    <option value="x-ray" data-price="100">X-Ray - $100</option>
+                    <option value="mri" data-price="250">MRI Scan - $250</option>
+                    <option value="covid-test" data-price="75">COVID-19 Test - $75</option>
+                </select>
+            </div>
+
+            <!-- Appointment Date and Time -->
+            <div class="form-section">
+                <h2>Appointment Date & Time</h2>
+                <label for="date">Select Date</label>
+                <input type="date" id="date" name="date" required>
+
+                <label for="time">Select Time</label>
+                <input type="time" id="time" name="time" required>
+            </div>
+
+            <!-- Payment Section -->
+            <div class="form-section">
+                <h2>Payment</h2>
+                <p id="payment-amount">Please select a test to see the price.</p>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="form-section">
+                <button type="submit" class="btn">Book Appointment</button>
+            </div>
+        </form>
+
+        <!-- View Appointment Button -->
+        <div class="form-section">
+            <button type="button" id="viewAppointmentBtn" class="btn">View My Appointment</button>
+        </div>
+
+        <!-- Success Message -->
+        <div id="successMessage" class="success-message" style="display: none;">
+            <p>Appointment booked successfully!</p>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript to handle query parameters and auto-select test and price
+        window.addEventListener('DOMContentLoaded', function() {
+            // Get URL parameters
+            const params = new URLSearchParams(window.location.search);
+            const selectedTest = params.get('test');
+            const price = params.get('price');
+
+            // Auto-select the test if available
+            if (selectedTest && price) {
+                const testDropdown = document.getElementById('test');
+                for (let i = 0; i < testDropdown.options.length; i++) {
+                    if (testDropdown.options[i].value === selectedTest) {
+                        testDropdown.selectedIndex = i;
+                        document.getElementById('payment-amount').textContent = "Price for the selected test: $" + price;
+                        break;
+                    }
+                }
+            }
+
+            // Update payment amount when the test changes
+            document.getElementById('test').addEventListener('change', function() {
+                var selectedTest = this.options[this.selectedIndex];
+                var price = selectedTest.getAttribute('data-price');
+
+                if (price) {
+                    document.getElementById('payment-amount').textContent = "Price for the selected test: $" + price;
+                } else {
+                    document.getElementById('payment-amount').textContent = "Please select a test to see the price.";
+                }
+            });
+        });
+
+        // Function to handle form submission
+        document.getElementById('appointmentForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            // Prepare form data
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                test: document.getElementById('test').value,
+                date: document.getElementById('date').value,
+                time: document.getElementById('time').value
+            };
+
+            // Submit form data to server
+            fetch('/book', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        document.getElementById('successMessage').style.display = 'block';
+                        document.getElementById('appointmentForm').reset();
+                        document.getElementById('payment-amount').textContent = 'Please select a test to see the price.';
+                    } else {
+                        alert(data.message); // Show error if time is not available
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        });
+
+        // Function to view appointment
+        document.getElementById('viewAppointmentBtn').addEventListener('click', function() {
+            const email = prompt('Please enter your email to view your appointment:');
+            if (email) {
+                fetch(`/view?email=${email}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            let appointmentInfo = 'Your Appointment(s):\n\n';
+                            data.appointments.forEach(appointment => {
+                                appointmentInfo += `Test: ${appointment.test}\nDate: ${appointment.appointment_date}\nTime: ${appointment.appointment_time}\n\n`;
+                            });
+                            alert(appointmentInfo);
+                        } else {
+                            alert(data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+        });
+    </script>
+
+</body>
+
+</html>
